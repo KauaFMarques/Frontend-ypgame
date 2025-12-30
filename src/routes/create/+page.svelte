@@ -18,7 +18,7 @@
 		error = "";
 		
 		try {
-			const response = await fetch(`https://yp-ghwh.onrender.com/room?prof=${prof}&room=${room}`, {
+			const response = await fetch(`https://yp-game-backend.onrender.com/room?prof=${prof}&room=${room}`, {
 				method: "POST",
 			});
 			

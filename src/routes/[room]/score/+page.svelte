@@ -7,7 +7,7 @@
     const store = useLocalStorage(page.params.room);
     
     async function loadScore(room) {
-    	const response = await fetch(`https://yp-ghwh.onrender.com/score?room=${room}`);
+    	const response = await fetch(`https://yp-game-backend.onrender.com/score?room=${room}`);
     	return response.json();
     }
 

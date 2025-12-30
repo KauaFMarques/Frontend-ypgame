@@ -19,7 +19,7 @@
 
         try {
             localStorage.removeItem(room);
-            const response = await fetch(`https://yp-ghwh.onrender.com/join?room=${room}&team=${team}`, {
+            const response = await fetch(`https://yp-game-backend.onrender.com/join?room=${room}&team=${team}`, {
                 method: "POST",
             });
             
