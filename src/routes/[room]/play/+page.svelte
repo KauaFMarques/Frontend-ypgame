@@ -37,13 +37,13 @@
         selectedAnswer = answerId;
         
         try {
-            // URL CORRETA E FORMATO JSON
             const response = await fetch("https://yp-game-backend.onrender.com/answer", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
+                    // Usamos Number() para garantir que o Go receba um inteiro
                     team: Number(store.value.teamId),
                     question: Number(currentQuestion.id),
                     answer: Number(answerId)
