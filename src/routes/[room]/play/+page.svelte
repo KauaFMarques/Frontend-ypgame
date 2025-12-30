@@ -37,17 +37,17 @@
         selectedAnswer = answerId;
         
         try {
-            const response = await fetch("https://yp-game-backend.onrender.com/answer", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    // Usamos Number() para garantir que o Go receba um inteiro
-                    team: Number(store.value.teamId),
-                    question: Number(currentQuestion.id),
-                    answer: Number(answerId)
-                })
+            // O seu backend em Go usa r.FormValue, então os dados devem ir na URL
+            // mesmo sendo um método POST.
+            const params = new URLSearchParams({
+                "team": String(store.value.teamId),
+                "question": String(currentQuestion.id),
+                "answer": String(answerId)
+            });
+
+            const response = await fetch(`https://yp-game-backend.onrender.com/answer?${params.toString()}`, {
+                method: "POST"
+                // Removido o Body JSON pois o seu Go está procurando na URL (strconv.Atoi do r.FormValue)
             });
             
             if (response.ok) {
@@ -69,11 +69,11 @@
                     isAnswering = false;
                 }, 2000);
             } else {
-                console.error("Erro no servidor:", response.status);
+                console.error("Erro no servidor (Status):", response.status);
                 isAnswering = false;
             }
         } catch (err) {
-            console.error("Erro ao enviar resposta:", err);
+            console.error("Erro na requisição:", err);
             isAnswering = false;
         }
     }
