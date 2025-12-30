@@ -1,5 +1,5 @@
 export async function load() {
-    const response = await fetch("https://yp-ghwh.onrender.com/questions")
+    const response = await fetch("https://yp-game-backend.onrender.com/questions")
     if (response.ok) {
         return {
             questions: await response.json(),

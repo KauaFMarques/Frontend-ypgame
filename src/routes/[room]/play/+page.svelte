@@ -37,7 +37,7 @@
         selectedAnswer = answerId;
         
         try {
-            const response = await fetch("https://yp-ghwh.onrender.com/answer?" + new URLSearchParams({
+            const response = await fetch("http://localhost:8080/answer?" + new URLSearchParams({
                     "team": store.value.teamId,
                     "question": currentQuestion.id,
                     "answer": answerId,
