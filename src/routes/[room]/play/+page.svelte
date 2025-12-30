@@ -37,20 +37,45 @@
         selectedAnswer = answerId;
         
         try {
-            const response = await fetch("http://localhost:8080/answer?" + new URLSearchParams({
-                    "team": store.value.teamId,
-                    "question": currentQuestion.id,
-                    "answer": answerId,
-                }), {
+            // CORREÇÃO: Enviando como JSON no BODY, não na URL
+            const response = await fetch("https://yp-game-backend.onrender.com/answer", {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    team: Number(store.value.teamId),
+                    question: Number(currentQuestion.id),
+                    answer: Number(answerId)
+                })
             });
-            const body = await response.json();
-            correct = body.correct;
-            showResult = true;
-        } catch (error) {
-            console.error("Erro ao enviar resposta:", error);
+            
+            if (response.ok) {
+                const result = await response.json();
+                correct = result.correct; // O backend retorna { "correct": true/false }
+                showResult = true;
+                
+                // Espera 2 segundos para mostrar se acertou e pula para a próxima
+                setTimeout(async () => {
+                    store.value.results.push({
+                        questionId: currentQuestion.id,
+                        answerId: answerId,
+                        correct: correct
+                    });
+                    
+                    if (correct) store.value.score += 1;
+                    
+                    showResult = false;
+                    selectedAnswer = null;
+                    isAnswering = false;
+                }, 2000);
+            } else {
+                alert("Erro ao enviar resposta. Tente novamente.");
+                isAnswering = false;
+            }
+        } catch (err) {
+            console.error(err);
             isAnswering = false;
-            selectedAnswer = null;
         }
     }
 
