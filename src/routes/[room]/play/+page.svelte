@@ -37,7 +37,7 @@
         selectedAnswer = answerId;
         
         try {
-            // CORREÇÃO: Enviando como JSON no BODY, não na URL
+            // URL CORRETA E FORMATO JSON
             const response = await fetch("https://yp-game-backend.onrender.com/answer", {
                 method: "POST",
                 headers: {
@@ -52,10 +52,9 @@
             
             if (response.ok) {
                 const result = await response.json();
-                correct = result.correct; // O backend retorna { "correct": true/false }
+                correct = result.correct; 
                 showResult = true;
                 
-                // Espera 2 segundos para mostrar se acertou e pula para a próxima
                 setTimeout(async () => {
                     store.value.results.push({
                         questionId: currentQuestion.id,
@@ -70,11 +69,11 @@
                     isAnswering = false;
                 }, 2000);
             } else {
-                alert("Erro ao enviar resposta. Tente novamente.");
+                console.error("Erro no servidor:", response.status);
                 isAnswering = false;
             }
         } catch (err) {
-            console.error(err);
+            console.error("Erro ao enviar resposta:", err);
             isAnswering = false;
         }
     }
