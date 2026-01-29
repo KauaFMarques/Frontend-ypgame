@@ -1,44 +1,37 @@
 <script>
-    import { goto } from "$app/navigation";
     import { page } from "$app/state";
     import useLocalStorage from "$lib/storage.svelte.js";
-    import { onMount, tick } from "svelte";
-    import { default as QuestionList } from "$lib/components/questionList.svelte";
-    const { data } = $props();
-    
-    onMount(() => {
-        console.log(page.params.room);
-        console.log(localStorage.getItem(page.params.room));
-    })
+    import { onMount } from "svelte";
 
+    const { data } = $props();
     const store = useLocalStorage(page.params.room);
     
-    let team = $state();
     let isAnswering = $state(false);
     let selectedAnswer = $state(null);
     let showResult = $state(false);
+    let correct = $state(null);
 
+    // Derivado: define qual pergunta mostrar baseado em quantos resultados já temos
     let currentQuestion = $derived.by(() => {
-        if (store.value) return data.questions[store.value.results.length];
+        if (store.value && data.questions) {
+            return data.questions[store.value.results.length];
+        }
     });
 
-    let correct = $state();
     let progress = $derived.by(() => {
-        if (store.value) {
-            return ((store.value.results.length / data.questions.length) * 100).toFixed(1);
+        if (store.value && data.questions.length > 0) {
+            return ((store.value.results.length / data.questions.length) * 100).toFixed(0);
         }
         return 0;
     });
 
-    async function handleAnswer(e, answerId) {
-        if (isAnswering) return;
+    async function handleAnswer(answerId) {
+        if (isAnswering || showResult) return;
         
         isAnswering = true;
         selectedAnswer = answerId;
         
         try {
-            // O seu backend em Go usa r.FormValue, então os dados devem ir na URL
-            // mesmo sendo um método POST.
             const params = new URLSearchParams({
                 "team": String(store.value.teamId),
                 "question": String(currentQuestion.id),
@@ -47,7 +40,6 @@
 
             const response = await fetch(`https://yp-game-backend.onrender.com/answer?${params.toString()}`, {
                 method: "POST"
-                // Removido o Body JSON pois o seu Go está procurando na URL (strconv.Atoi do r.FormValue)
             });
             
             if (response.ok) {
@@ -55,43 +47,31 @@
                 correct = result.correct; 
                 showResult = true;
                 
-                setTimeout(async () => {
-                    store.value.results.push({
-                        questionId: currentQuestion.id,
-                        answerId: answerId,
-                        correct: correct
-                    });
-                    
-                    if (correct) store.value.score += 1;
-                    
-                    showResult = false;
-                    selectedAnswer = null;
-                    isAnswering = false;
-                }, 2000);
-            } else {
-                console.error("Erro no servidor (Status):", response.status);
-                isAnswering = false;
+                // ATENÇÃO: Agora salvamos APENAS AQUI para evitar pular perguntas
+                store.value.results.push({
+                    questionId: currentQuestion.id,
+                    answerId: answerId,
+                    correct: correct
+                });
+                
+                if (correct) store.value.score += 1;
             }
         } catch (err) {
-            console.error("Erro na requisição:", err);
+            console.error("Erro:", err);
+        } finally {
             isAnswering = false;
         }
     }
 
-    function nextQuestion(e) {
-        store.push(correct);
-        if (correct) store.increment();
-        
-        // Reset states
-        correct = undefined;
-        selectedAnswer = null;
+    function goToNext() {
+        // Apenas reseta o feedback visual. 
+        // A próxima pergunta aparecerá automaticamente por causa do $derived
         showResult = false;
-        isAnswering = false;
+        selectedAnswer = null;
+        correct = null;
 
         if (store.value.results.length === data.questions.length) {
             store.value.finished = true;
-        } else {
-            e.preventDefault();
         }
     }
 </script>
@@ -99,42 +79,40 @@
 <div class="play-container">
     {#if store.value && !store.value.finished}
         <header class="game-header">
-            <div class="team-info">
-                <span class="team-name">👥 {store.value.team}</span>
-                <span class="current-score">🎯 {store.value.score} pts</span>
+            <div class="header-top">
+                <span class="team-badge">👥 {store.value.team}</span>
+                <span class="score-badge">🎯 {store.value.score} <small>pts</small></span>
             </div>
             
-            <div class="progress-container">
-                <div class="progress-info">
-                    <span class="question-count">
-                        Pergunta {store.value.results.length + 1} de {data.questions.length}
-                    </span>
-                    <span class="progress-percent">{progress}%</span>
+            <div class="progress-section">
+                <div class="progress-labels">
+                    <span>Pergunta {store.value.results.length + 1} de {data.questions.length}</span>
+                    <span>{progress}%</span>
                 </div>
-                <div class="progress-bar">
+                <div class="progress-track">
                     <div class="progress-fill" style="width: {progress}%"></div>
                 </div>
             </div>
         </header>
 
-        <div class="question-container">
+        <main class="question-area">
             {#if currentQuestion}
-                <div class="question-card">
+                <div class="question-card" class:blur={showResult}>
                     <h2 class="question-text">{currentQuestion.text}</h2>
                     
                     <div class="answers-grid">
                         {#each currentQuestion.answers as answer}
                             <button 
-                                class="answer-btn {selectedAnswer === answer.id ? 'selected' : ''} 
-                                       {showResult && selectedAnswer === answer.id ? (correct ? 'correct' : 'incorrect') : ''}"
-                                onclick={(e) => handleAnswer(e, answer.id)}
-                                disabled={isAnswering || showResult}
+                                class="answer-btn"
+                                class:selected={selectedAnswer === answer.id}
+                                class:correct={showResult && selectedAnswer === answer.id && correct}
+                                class:incorrect={showResult && selectedAnswer === answer.id && !correct}
+                                onclick={() => handleAnswer(answer.id)}
+                                disabled={showResult}
                             >
                                 <span class="answer-text">{answer.text}</span>
                                 {#if showResult && selectedAnswer === answer.id}
-                                    <span class="result-icon">
-                                        {correct ? '✅' : '❌'}
-                                    </span>
+                                    <span>{correct ? '✅' : '❌'}</span>
                                 {/if}
                             </button>
                         {/each}
@@ -143,219 +121,211 @@
             {/if}
 
             {#if showResult}
-                <div class="result-container">
-                    <div class="result-card {correct ? 'success' : 'error'}">
-                        <div class="result-icon-large">
-                            {correct ? '🎉' : '😞'}
-                        </div>
-                        <h3 class="result-title">
-                            {correct ? 'Correto!' : 'Incorreto!'}
-                        </h3>
-                        <p class="result-message">
-                            {correct 
-                                ? 'Parabéns! Você ganhou 1 ponto.' 
-                                : 'Não desanime, continue tentando!'}
-                        </p>
+                <div class="modal-overlay">
+                    <div class="result-modal" class:is-correct={correct}>
+                        <div class="result-icon">{correct ? '🎉' : '😓'}</div>
+                        <h3>{correct ? 'Excelente!' : 'Não foi dessa vez'}</h3>
+                        <p>{correct ? 'Você acertou e ganhou 1 ponto.' : 'Estude mais este ponto para a próxima!'}</p>
                         
-                        <button 
-                            class="next-btn {correct ? 'success' : 'error'}" 
-                            onclick={(e) => nextQuestion(e)}
-                        >
-                            {store.value.results.length === data.questions.length ? 'Ver Resultado Final' : 'Próxima Pergunta'}
-                            <span class="next-arrow">→</span>
+                        <button class="continue-btn" onclick={goToNext}>
+                            {store.value.results.length === data.questions.length ? 'Finalizar Quiz' : 'Próxima Pergunta'}
                         </button>
                     </div>
                 </div>
             {/if}
-        </div>
+        </main>
 
-    {:else if store.value && store.value.finished}
-        <div class="finished-container">
-            <div class="finished-card">
-                <div class="celebration">🏆</div>
-                <h2>Quiz Finalizado!</h2>
-                <p class="final-score">Pontuação Final: <strong>{store.value.score} pontos</strong></p>
-                <a href="/{page.params.room}/score" class="view-results-btn">
-                    Ver Placar Final
-                </a>
+    {:else if store.value?.finished}
+        <div class="finish-screen">
+            <div class="finish-card">
+                <div class="trophy">🏆</div>
+                <h2>Parabéns, {store.value.team}!</h2>
+                <div class="final-score-box">
+                    <span>Pontuação Final</span>
+                    <strong>{store.value.score}</strong>
+                </div>
+                <a href="/{page.params.room}/score" class="results-link">Ver Ranking Geral</a>
             </div>
         </div>
-    {:else}
-        <div class="loading">Carregando dados do time...</div>
     {/if}
-</div> <style>
-    /* Mova aquele trecho que estava solto para cá, para o início do style */
-    .result-card.error {
-        background: linear-gradient(135deg, #fff5f5, #fed7d7);
-        border: 2px solid #e53e3e;
+</div>
+
+<style>
+    :global(body) {
+        background-color: #f0f2f5;
+        margin: 0;
+        font-family: 'Inter', system-ui, sans-serif;
     }
 
-    .result-icon-large {
-        font-size: 3rem;
-        margin-bottom: 15px;
+    .play-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        min-height: 100vh;
     }
 
-    .result-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 10px;
+    /* HEADER */
+    .game-header {
+        background: white;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        margin-bottom: 24px;
     }
 
-    .result-card.success .result-title {
-        color: #22543d;
-    }
-
-    .result-card.error .result-title {
-        color: #742a2a;
-    }
-
-    .result-message {
-        font-size: 1rem;
-        margin-bottom: 25px;
-        opacity: 0.8;
-    }
-
-    .next-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        padding: 15px 30px;
-        border-radius: 25px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        color: white;
-    }
-
-    .next-btn.success {
-        background: linear-gradient(135deg, #48bb78, #38a169);
-        box-shadow: 0 8px 20px rgba(72, 187, 120, 0.3);
-    }
-
-    .next-btn.error {
-        background: linear-gradient(135deg, #e53e3e, #c53030);
-        box-shadow: 0 8px 20px rgba(229, 62, 62, 0.3);
-    }
-
-    .next-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-    }
-
-    .next-arrow {
-        font-size: 1.2rem;
-        transition: transform 0.3s ease;
-    }
-
-    .next-btn:hover .next-arrow {
-        transform: translateX(5px);
-    }
-
-    .finished-container {
+    .header-top {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 300px;
+        justify-content: space-between;
+        margin-bottom: 20px;
     }
 
-    .finished-card {
-        text-align: center;
-        padding: 40px;
-        background: linear-gradient(135deg, #f7fafc, #edf2f7);
+    .team-badge, .score-badge {
+        padding: 8px 16px;
         border-radius: 20px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        border: 2px solid #e2e8f0;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .team-badge { background: #e0e7ff; color: #4338ca; }
+    .score-badge { background: #fef3c7; color: #92400e; }
+
+    /* PROGRESS BAR */
+    .progress-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+
+    .progress-track {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: #10b981;
+        transition: width 0.4s ease;
+    }
+
+    /* QUESTION CARD */
+    .question-card {
+        background: white;
+        padding: 32px;
+        border-radius: 24px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        transition: filter 0.3s;
+    }
+
+    .question-card.blur { filter: blur(4px); pointer-events: none; }
+
+    .question-text {
+        font-size: 1.25rem;
+        color: #1f2937;
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+
+    .answers-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .answer-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border: 2px solid #f3f4f6;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+    }
+
+    .answer-btn:hover:not(:disabled) {
+        border-color: #6366f1;
+        background: #f8fafc;
+    }
+
+    .answer-btn.correct { background: #d1fae5; border-color: #10b981; color: #065f46; }
+    .answer-btn.incorrect { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+
+    /* MODAL RESULTADO */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 100;
+    }
+
+    .result-modal {
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        text-align: center;
         max-width: 400px;
         width: 100%;
+        animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .celebration {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        animation: bounce 1s ease infinite;
-    }
+    @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-        40% { transform: translateY(-10px); }
-        60% { transform: translateY(-5px); }
-    }
+    .result-icon { font-size: 4rem; margin-bottom: 16px; }
 
-    .finished-card h2 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #4a5568;
-        margin-bottom: 15px;
-    }
-
-    .final-score {
-        font-size: 1.2rem;
-        color: #718096;
-        margin-bottom: 25px;
-    }
-
-    .final-score strong {
-        color: #5a67d8;
-        font-size: 1.4rem;
-    }
-
-    .view-results-btn {
-        display: inline-block;
-        padding: 15px 30px;
-        background: linear-gradient(135deg, #5a67d8, #667eea);
+    .continue-btn {
+        margin-top: 24px;
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        background: #1f2937;
         color: white;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    /* TELA FINAL */
+    .finish-screen {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+    }
+
+    .finish-card {
+        background: white;
+        padding: 48px;
+        border-radius: 32px;
+        text-align: center;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+
+    .trophy { font-size: 5rem; margin-bottom: 20px; }
+
+    .final-score-box {
+        margin: 24px 0;
+        padding: 20px;
+        background: #f8fafc;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .final-score-box strong { font-size: 3rem; color: #6366f1; }
+
+    .results-link {
+        color: #6366f1;
         text-decoration: none;
-        border-radius: 25px;
         font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .view-results-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(90, 103, 216, 0.3);
-    }
-
-    @media (max-width: 768px) {
-        .game-header {
-            padding: 15px;
-        }
-        
-        .team-info {
-            flex-direction: column;
-            gap: 10px;
-            text-align: center;
-        }
-        
-        .question-card {
-            padding: 25px 20px;
-        }
-        
-        .question-text {
-            font-size: 1.2rem;
-        }
-        
-        .answer-btn {
-            padding: 15px 20px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .play-container {
-            gap: 20px;
-        }
-        
-        .question-text {
-            font-size: 1.1rem;
-        }
-        
-        .result-card,
-        .finished-card {
-            padding: 25px 20px;
-        }
-        
-        .celebration {
-            font-size: 3rem;
-        }
     }
 </style>
