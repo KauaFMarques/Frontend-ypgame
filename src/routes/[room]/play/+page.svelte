@@ -118,27 +118,29 @@
         </header>
 
         <div class="question-container">
-            <div class="question-card">
-                <h2 class="question-text">{currentQuestion.text}</h2>
-                
-                <div class="answers-grid">
-                    {#each currentQuestion.answers as answer}
-                        <button 
-                            class="answer-btn {selectedAnswer === answer.id ? 'selected' : ''} 
-                                   {showResult && selectedAnswer === answer.id ? (correct ? 'correct' : 'incorrect') : ''}"
-                            onclick={(e) => handleAnswer(e, answer.id)}
-                            disabled={isAnswering || showResult}
-                        >
-                            <span class="answer-text">{answer.text}</span>
-                            {#if showResult && selectedAnswer === answer.id}
-                                <span class="result-icon">
-                                    {correct ? '✅' : '❌'}
-                                </span>
-                            {/if}
-                        </button>
-                    {/each}
+            {#if currentQuestion}
+                <div class="question-card">
+                    <h2 class="question-text">{currentQuestion.text}</h2>
+                    
+                    <div class="answers-grid">
+                        {#each currentQuestion.answers as answer}
+                            <button 
+                                class="answer-btn {selectedAnswer === answer.id ? 'selected' : ''} 
+                                       {showResult && selectedAnswer === answer.id ? (correct ? 'correct' : 'incorrect') : ''}"
+                                onclick={(e) => handleAnswer(e, answer.id)}
+                                disabled={isAnswering || showResult}
+                            >
+                                <span class="answer-text">{answer.text}</span>
+                                {#if showResult && selectedAnswer === answer.id}
+                                    <span class="result-icon">
+                                        {correct ? '✅' : '❌'}
+                                    </span>
+                                {/if}
+                            </button>
+                        {/each}
+                    </div>
                 </div>
-            </div>
+            {/if}
 
             {#if showResult}
                 <div class="result-container">
@@ -155,14 +157,13 @@
                                 : 'Não desanime, continue tentando!'}
                         </p>
                         
-                        <a 
+                        <button 
                             class="next-btn {correct ? 'success' : 'error'}" 
-                            href="/{page.params.room}/score" 
                             onclick={(e) => nextQuestion(e)}
                         >
-                            {store.value.results.length + 1 === data.questions.length ? 'Ver Resultado Final' : 'Próxima Pergunta'}
+                            {store.value.results.length === data.questions.length ? 'Ver Resultado Final' : 'Próxima Pergunta'}
                             <span class="next-arrow">→</span>
-                        </a>
+                        </button>
                     </div>
                 </div>
             {/if}
@@ -179,211 +180,11 @@
                 </a>
             </div>
         </div>
+    {:else}
+        <div class="loading">Carregando dados do time...</div>
     {/if}
-</div>
-
-<style>
-    .play-container {
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
-        animation: fadeInUp 0.6s ease-out;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .game-header {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border-radius: 15px;
-        color: white;
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-    }
-
-    .team-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 600;
-    }
-
-    .team-name {
-        font-size: 1.2rem;
-    }
-
-    .current-score {
-        font-size: 1.1rem;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 8px 16px;
-        border-radius: 20px;
-    }
-
-    .progress-container {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .progress-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-
-    .progress-bar {
-        width: 100%;
-        height: 8px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #48bb78, #38a169);
-        border-radius: 4px;
-        transition: width 0.5s ease;
-    }
-
-    .question-container {
-        display: flex;
-        flex-direction: column;
-        gap: 25px;
-    }
-
-    .question-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-    }
-
-    .question-text {
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #2d3748;
-        margin-bottom: 25px;
-        line-height: 1.5;
-        text-align: center;
-    }
-
-    .answers-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-
-    .answer-btn {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 25px;
-        border: 2px solid #e2e8f0;
-        border-radius: 15px;
-        background: white;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 1rem;
-        font-weight: 500;
-        text-align: left;
-    }
-
-    .answer-btn:hover:not(:disabled) {
-        border-color: #5a67d8;
-        background: #f7fafc;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(90, 103, 216, 0.15);
-    }
-
-    .answer-btn.selected {
-        border-color: #5a67d8;
-        background: linear-gradient(135deg, #e6fffa, #b2f5ea);
-    }
-
-    .answer-btn.correct {
-        border-color: #48bb78;
-        background: linear-gradient(135deg, #f0fff4, #c6f6d5);
-        animation: pulse-success 0.6s ease;
-    }
-
-    .answer-btn.incorrect {
-        border-color: #e53e3e;
-        background: linear-gradient(135deg, #fff5f5, #fed7d7);
-        animation: shake 0.6s ease;
-    }
-
-    @keyframes pulse-success {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-    }
-
-    @keyframes shake {
-        0%, 20%, 40%, 60%, 80% { transform: translateX(-2px); }
-        10%, 30%, 50%, 70%, 90% { transform: translateX(2px); }
-        100% { transform: translateX(0); }
-    }
-
-    .answer-btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.7;
-    }
-
-    .answer-text {
-        flex: 1;
-        color: #4a5568;
-    }
-
-    .result-icon {
-        font-size: 1.2rem;
-        margin-left: 10px;
-    }
-
-    .result-container {
-        display: flex;
-        justify-content: center;
-        animation: slideUp 0.5s ease-out;
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(50px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .result-card {
-        text-align: center;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        max-width: 400px;
-        width: 100%;
-    }
-
-    .result-card.success {
-        background: linear-gradient(135deg, #f0fff4, #c6f6d5);
-        border: 2px solid #48bb78;
-    }
-
+</div> <style>
+    /* Mova aquele trecho que estava solto para cá, para o início do style */
     .result-card.error {
         background: linear-gradient(135deg, #fff5f5, #fed7d7);
         border: 2px solid #e53e3e;
