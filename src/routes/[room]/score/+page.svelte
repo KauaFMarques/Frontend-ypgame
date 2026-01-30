@@ -174,6 +174,33 @@
         background: linear-gradient(135deg, #ef4444, #dc2626);
     }
 
+    /* Estilos para a coluna de Status */
+    .status-cell {
+        padding: 14px 12px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge.finished {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: white;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    }
+
+    .badge.in-progress {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    }
+
     @media (max-width: 768px) {
         .team-name {
             font-size: 0.9rem;
@@ -187,6 +214,11 @@
             width: 22px;
             height: 22px;
             font-size: 0.7rem;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 4px 10px;
         }
     }
 </style>
@@ -212,6 +244,7 @@
                                 <th>Equipe</th>
                                 <th>Pontos</th>
                                 <th>Progresso</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -230,6 +263,13 @@
                                                 </div>
                                             {/each}
                                         </div>
+                                    </td>
+                                    <td class="status-cell">
+                                        {#if team.finished}
+                                            <span class="badge finished">✓ Finalizado</span>
+                                        {:else}
+                                            <span class="badge in-progress">Jogando...</span>
+                                        {/if}
                                     </td>
                                 </tr>
                             {/each}
