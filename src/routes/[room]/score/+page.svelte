@@ -2,8 +2,6 @@
     import { page } from "$app/state";
     import { onMount } from "svelte";
     
-    // CORREÇÃO: O nome do parâmetro deve ser igual ao nome da pasta [room]
-    // Usamos um valor padrão ou uma string vazia para evitar erros de undefined
     const roomCode = $derived(page.params.room || ""); 
 
     async function loadScore() {
@@ -18,7 +16,6 @@
         }
     }
 
-    // Inicializamos como uma Promise para o #await funcionar
     let scorePromise = $state(loadScore());
     
     onMount(() => {
@@ -28,6 +25,171 @@
         return () => clearInterval(interval);
     });
 </script>
+
+<style>
+    :global(body) {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: #f1f5f9;
+    }
+
+    .score-container {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .title {
+        font-size: 2.4rem;
+        margin: 0;
+        letter-spacing: 1px;
+    }
+
+    .room-info {
+        margin-top: 8px;
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+
+    .code-value {
+        font-weight: bold;
+        color: #38bdf8;
+        font-size: 1.1rem;
+    }
+
+    .content {
+        margin-top: 20px;
+    }
+
+    .loading,
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        font-size: 1.2rem;
+        opacity: 0.7;
+    }
+
+    .table-wrapper {
+        background: #0b1220;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        overflow-x: auto;
+    }
+
+    .score-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead {
+        background: #1e293b;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    th, td {
+        padding: 14px 12px;
+        text-align: center;
+    }
+
+    th {
+        opacity: 0.7;
+    }
+
+    .team-row {
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.2s ease, transform 0.15s ease;
+    }
+
+    .team-row:hover {
+        background: rgba(56, 189, 248, 0.08);
+        transform: scale(1.01);
+    }
+
+    .rank {
+        font-weight: bold;
+        font-size: 1.1rem;
+        width: 60px;
+    }
+
+    .team-row:nth-child(1) .rank {
+        color: #facc15;
+        font-size: 1.3rem;
+    }
+
+    .team-row:nth-child(2) .rank {
+        color: #cbd5e1;
+    }
+
+    .team-row:nth-child(3) .rank {
+        color: #f97316;
+    }
+
+    .team-name {
+        text-align: left;
+        font-weight: 600;
+        font-size: 1rem;
+        padding-left: 20px;
+    }
+
+    .team-score {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #38bdf8;
+    }
+
+    .status-map {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+    }
+
+    .status-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .status-dot.correct {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .status-dot.wrong {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    @media (max-width: 768px) {
+        .team-name {
+            font-size: 0.9rem;
+        }
+
+        .team-score {
+            font-size: 1.1rem;
+        }
+
+        .status-dot {
+            width: 22px;
+            height: 22px;
+            font-size: 0.7rem;
+        }
+    }
+</style>
 
 <div class="score-container">
     <header class="header">
