@@ -2,23 +2,25 @@
     import { page } from "$app/state";
     import { onMount } from "svelte";
     
-    // Obtém o código da sala da URL (ex: /abc1234/score -> abc1234)
-    const roomCode = page.params.code; 
+    // CORREÇÃO: O nome do parâmetro deve ser igual ao nome da pasta [room]
+    // Usamos um valor padrão ou uma string vazia para evitar erros de undefined
+    const roomCode = $derived(page.params.room || ""); 
 
     async function loadScore() {
+        if (!roomCode) return [];
         try {
             const response = await fetch(`https://yp-game-backend.onrender.com/score?room=${roomCode}`);
             if (!response.ok) throw new Error("Falha ao carregar");
             return await response.json();
         } catch (e) {
-            console.error(e);
+            console.error("Erro no fetch:", e);
             return [];
         }
     }
 
+    // Inicializamos como uma Promise para o #await funcionar
     let scorePromise = $state(loadScore());
     
-    // Atualiza a cada 5 segundos
     onMount(() => {
         const interval = setInterval(() => {
             scorePromise = loadScore();
@@ -38,7 +40,7 @@
             <div class="loading">Carregando placar...</div>
         {:then teams}
             {#if !teams || teams.length === 0}
-                <div class="empty-state">Aguardando jogadores...</div>
+                <div class="empty-state">Aguardando jogadores na sala {roomCode}...</div>
             {:else}
                 <div class="table-wrapper">
                     <table class="score-table">
@@ -47,8 +49,7 @@
                                 <th>#</th>
                                 <th>Equipe</th>
                                 <th>Pontos</th>
-                                <th>Respostas</th>
-                                <th>Feedback</th>
+                                <th>Progresso</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -68,7 +69,6 @@
                                             {/each}
                                         </div>
                                     </td>
-                                    <td class="feedback-text">{team.feedback || "-"}</td>
                                 </tr>
                             {/each}
                         </tbody>
@@ -78,21 +78,3 @@
         {/await}
     </div>
 </div>
-
-<style>
-    /* Use os mesmos estilos CSS que você já tinha para a tabela */
-    .score-container { max-width: 1000px; margin: 0 auto; padding: 20px; font-family: 'Inter', sans-serif; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .table-wrapper { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .score-table { width: 100%; border-collapse: collapse; }
-    .score-table th { background: #f7fafc; padding: 15px; text-align: left; }
-    .team-row { border-top: 1px solid #edf2f7; }
-    .team-name { padding: 15px; font-weight: 600; }
-    .team-score { padding: 15px; font-weight: bold; color: #5a67d8; }
-    .rank { padding: 15px; color: #718096; }
-    .status-map { display: flex; gap: 4px; padding: 15px; }
-    .status-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; }
-    .correct { background: #48bb78; }
-    .wrong { background: #f56565; }
-    .loading, .empty-state { text-align: center; padding: 40px; color: #718096; }
-</style>
