@@ -1,21 +1,27 @@
 <script>
     import { page } from "$app/state";
     import { onMount } from "svelte";
-    import useLocalStorage from "$lib/storage.svelte.js";
-    const { data } = $props();
-
-    const store = useLocalStorage(page.params.room);
     
-    async function loadScore(room) {
-        const response = await fetch(`https://yp-game-backend.onrender.com/score?room=${room}`);
-        return response.json();
+    // Obtém o código da sala da URL (ex: /abc1234/score -> abc1234)
+    const roomCode = page.params.code; 
+
+    async function loadScore() {
+        try {
+            const response = await fetch(`https://yp-game-backend.onrender.com/score?room=${roomCode}`);
+            if (!response.ok) throw new Error("Falha ao carregar");
+            return await response.json();
+        } catch (e) {
+            console.error(e);
+            return [];
+        }
     }
 
-    let scorePromise = $state(loadScore(page.params.room));
+    let scorePromise = $state(loadScore());
     
+    // Atualiza a cada 5 segundos
     onMount(() => {
         const interval = setInterval(() => {
-            scorePromise = loadScore(page.params.room);
+            scorePromise = loadScore();
         }, 5000);
         return () => clearInterval(interval);
     });
@@ -23,28 +29,26 @@
 
 <div class="score-container">
     <header class="header">
-        <h1 class="title">🏆 Placar de Aprendizagem</h1>
-        <p class="room-info">Sala: <span class="code-value">{page.params.room}</span></p>
+        <h1 class="title">🏆 Placar em Tempo Real</h1>
+        <p class="room-info">Sala: <span class="code-value">{roomCode}</span></p>
     </header>
 
     <div class="content">
         {#await scorePromise}
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Calculando resultados...</p>
-            </div>
+            <div class="loading">Carregando placar...</div>
         {:then teams}
             {#if !teams || teams.length === 0}
-                <div class="empty-state">Aguardando as equipes entrarem...</div>
+                <div class="empty-state">Aguardando jogadores...</div>
             {:else}
                 <div class="table-wrapper">
                     <table class="score-table">
                         <thead>
                             <tr>
-                                <th>Posição</th>
+                                <th>#</th>
                                 <th>Equipe</th>
                                 <th>Pontos</th>
-                                <th>Mapa de Respostas (Questão 1 → 20)</th>
+                                <th>Respostas</th>
+                                <th>Feedback</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -58,12 +62,13 @@
                                             {#each team.details || [] as detail}
                                                 <div 
                                                     class="status-dot {detail.correct ? 'correct' : 'wrong'}"
-                                                    title="Questão {detail.question_id}: {detail.correct ? 'Acertou' : 'Errou'}">
+                                                    title="Questão {detail.question_id}">
                                                     {detail.correct ? '✓' : '✕'}
                                                 </div>
                                             {/each}
                                         </div>
                                     </td>
+                                    <td class="feedback-text">{team.feedback || "-"}</td>
                                 </tr>
                             {/each}
                         </tbody>
@@ -75,64 +80,19 @@
 </div>
 
 <style>
-    .score-container {
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: 'Inter', sans-serif;
-    }
-
-    .header { text-align: center; margin-bottom: 40px; }
-    .title { font-size: 2.5rem; color: #2d3748; }
-    .code-value { color: #5a67d8; font-weight: bold; }
-
-    .table-wrapper {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        overflow: hidden;
-    }
-
-    .score-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .score-table th {
-        background: #f7fafc;
-        padding: 15px;
-        text-align: left;
-        color: #718096;
-    }
-
+    /* Use os mesmos estilos CSS que você já tinha para a tabela */
+    .score-container { max-width: 1000px; margin: 0 auto; padding: 20px; font-family: 'Inter', sans-serif; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .table-wrapper { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .score-table { width: 100%; border-collapse: collapse; }
+    .score-table th { background: #f7fafc; padding: 15px; text-align: left; }
     .team-row { border-top: 1px solid #edf2f7; }
-    .team-name { font-weight: 600; padding: 15px; }
-    .team-score { font-weight: bold; color: #5a67d8; font-size: 1.2rem; }
-
-    /* O MAPA DE STATUS (PONTINHOS) */
-    .status-map {
-        display: flex;
-        gap: 6px;
-        padding: 10px;
-        flex-wrap: wrap;
-    }
-
-    .status-dot {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        color: white;
-        cursor: help;
-        transition: transform 0.2s;
-    }
-
-    .status-dot:hover { transform: scale(1.2); }
-    .correct { background-color: #48bb78; } /* Verde */
-    .wrong { background-color: #f56565; }   /* Vermelho */
-
-    .loading { text-align: center; padding: 50px; }
+    .team-name { padding: 15px; font-weight: 600; }
+    .team-score { padding: 15px; font-weight: bold; color: #5a67d8; }
+    .rank { padding: 15px; color: #718096; }
+    .status-map { display: flex; gap: 4px; padding: 15px; }
+    .status-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; }
+    .correct { background: #48bb78; }
+    .wrong { background: #f56565; }
+    .loading, .empty-state { text-align: center; padding: 40px; color: #718096; }
 </style>
